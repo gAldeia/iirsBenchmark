@@ -10,6 +10,15 @@ Benchmark proposed in the paper "Interpretability in Symbolic Regression: a benc
 > In some situations, the interpretability of the machine learning models play a role as important as the model accuracy. This comes from the need of trusting the prediction model, verifying some of their properties or even enforcing such properties to improve fairness. To satisfy this need, many model-agnostic explainers were proposed with the goal of working with _black-box_. Most of these works are focused on classification models, even though an adaptation to regression models is usually straightforward. Regression task can be explored with techniques considered _white-boxes_ (_e.g._, linear regression) or gray boxes (_e.g._, symbolic regression), which can deliver interpretable results. The use of explanation methods in the context of regression - and, in particular, symbolic regression - is studied in this paper, coupled with different explanation methods from the literature. Experiments were performed using 100 physics equations set together with different interpretable and non-interpretable regression methods and popular explanation methods, wrapped in a module and tested through an intensive benchmark. We adapted explanation quality metrics to inspect the performance of explainers for the regression task. The results showed that, for this specific problem domain, the Symbolic Regression models outperformed all the regression models in every quality measure. Among the tested methods, Partial Effects and SHAP presented more stable results while Integrated Gradients was unstable with tree-based models. As a byproduct of this work, we released a Python library for benchmarking explanation methods with regression models. This library will be maintened by expanding it with more explainers and regressors.
 
 
+## Installation
+
+Just clone the repository and, inside its root, type:
+
+```
+python -m pip install .
+```
+
+
 ## Implemented regressors
 
 The following regressors are available in _iirsBenchmark_:
