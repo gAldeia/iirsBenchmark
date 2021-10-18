@@ -34,6 +34,7 @@ from iirsBenchmark.explainers.PartialEffectsadj_explainer     import PartialEffe
 from iirsBenchmark.explainers.IntegratedGradients_explainer   import IntegratedGradients_explainer
 from iirsBenchmark.explainers.MorrisSensitivity_explainer     import MorrisSensitivity_explainer
 from iirsBenchmark.explainers.Intrinsic_explainer             import Intrinsic_explainer
+from iirsBenchmark.explainers.ELA_explainer                   import ELA_explainer
 
 __all__ = [
     'PermutationImportance_explainer',
@@ -47,4 +48,5 @@ __all__ = [
     'PartialEffectsadj_explainer',
     'PartialEffects_explainer',
     'MorrisSensitivity_explainer',
+    'ELA_explainer',
 ]

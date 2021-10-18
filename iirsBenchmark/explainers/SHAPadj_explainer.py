@@ -70,6 +70,8 @@ class SHAPadj_explainer(Base_explainer):
         
         self._shap.fit(X, y)
 
+        return self
+
 
     def explain_local(self, X):
         

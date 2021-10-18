@@ -32,6 +32,8 @@ class IntegratedGradients_explainer(Base_explainer):
         self.y_ = y
         
         self._x_baseline = np.mean(self.X_, axis=0).reshape(1, -1)
+
+        return self
         
 
     def explain_local(self, X):

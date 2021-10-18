@@ -31,6 +31,8 @@ class RandomImportance_explainer(Base_explainer):
         self.X_ = X
         self.y_ = y
 
+        return self
+
 
     def explain_local(self, X):
         

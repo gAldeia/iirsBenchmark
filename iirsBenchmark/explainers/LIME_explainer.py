@@ -38,6 +38,8 @@ class LIME_explainer(Base_explainer):
         self._LIME_explainer = lime.lime_tabular.LimeTabularExplainer(
             self.X_, verbose=False, mode='regression')
 
+        return self
+
 
     def explain_local(self, X):
         

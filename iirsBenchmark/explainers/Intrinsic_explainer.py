@@ -33,13 +33,13 @@ class Intrinsic_explainer(Base_explainer):
         # The data doesn't matter for this method
         self.fitted_ = True
         
+        return self
+        
 
     def explain_global(self, X, y):
         
         self._check_is_fitted()
         
-        X, y = check_X_y(X, y)
-
         explanation = self.predictor.feature_importances_
         
         if explanation.ndim == 1:

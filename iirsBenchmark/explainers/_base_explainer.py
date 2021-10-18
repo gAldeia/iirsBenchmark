@@ -36,7 +36,8 @@ And the following methods, that should be overwriten in subclasses:
 * `_check_is_fitted(self)` : check if the explainer is fitted (when fitting
     an explainer, some attributes ending with an underscore are created 
     within the class instance) when calling `explain_local` or `explain_global`;
-* `fit(X, y)`: fits the explainer with the training data;
+* `fit(X, y)`: fits the explainer with the training data, should return
+    self at the end of the process (this allows fit().explain() chaining);
 * `explain_local(self, X)` : takes as argument a matrix of shape
     (n_observations, n_features) and return a local explanation for each
     observation;
@@ -120,4 +121,4 @@ class Base_explainer():
 
         raise NotApplicableException(
             f"The explainer {self.__class__.__name__} does not support "
-            "local explanations.")
+            "global explanations.")

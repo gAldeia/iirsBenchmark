@@ -51,6 +51,8 @@ class SHAP_explainer(Base_explainer):
             sampled_data,
             silent=True)
 
+        return self
+
 
     def explain_local(self, X):
         

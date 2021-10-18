@@ -30,6 +30,8 @@ class MorrisSensitivity_explainer(Base_explainer):
 
         self.X_ = X
         self.y_ = y
+
+        return self
         
         
     def explain_global(self, X, y):

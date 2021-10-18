@@ -37,6 +37,8 @@ class SAGE_explainer(Base_explainer):
         self.imputer   = sage.MarginalImputer(self.predictor, self.X_)
         self.estimator = sage.PermutationEstimator(self.imputer, 'mse')
 
+        return self
+
         
     def explain_global(self, X, y):
         

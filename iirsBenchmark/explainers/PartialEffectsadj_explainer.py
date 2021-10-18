@@ -46,6 +46,8 @@ class PartialEffectsadj_explainer(Base_explainer):
         self.y_ = y
         
         self._partialEffects.fit(X, y)
+
+        return self
         
 
     def explain_local(self, X):
