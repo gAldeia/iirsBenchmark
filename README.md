@@ -187,7 +187,13 @@ We would like to recognize the importance of their work. To get to know each dep
 ### Explainers
 
 * [**SHAP**] [A Unified Approach to Interpreting Model Predictions](https://papers.nips.cc/paper/2017/hash/8a20a8621978632d76c43dfd28b67767-Abstract.html);
+* [**SAGE**] [Understanding Global Feature Contributions With Additive Importance Measures](https://arxiv.org/abs/2004.00668);
 * [**LIME**] ["Why Should I Trust You?": Explaining the Predictions of Any Classifier](https://arxiv.org/abs/1602.04938);
+* [**Permutation Importance**] [Random Forests](https://link.springer.com/article/10.1023%2FA%3A1010933404324);
+* [**Morris Sensitivity**] [Factorial Sampling Plans for Preliminary Computational Experiments](https://www.tandfonline.com/doi/abs/10.1080/00401706.1991.10484804);
+* [**Integrated Gradients**] [Axiomatic Attribution for Deep Networks](https://arxiv.org/abs/1703.01365);
+* [**ELA**] [Explaining Symbolic Regression Predictions](https://ieeexplore.ieee.org/document/9185683);
+* [**Partial Effects (for symbolic regression)**] [Measuring feature importance of symbolic regression models using partial effects](https://dl.acm.org/doi/10.1145/3449639.3459302);
 
 ### Regressors
 
