@@ -1,14 +1,10 @@
 import pytest
 
 import pandas as pd
-import numpy  as np
 
-import iirsBenchmark.regressors as regressors
 import iirsBenchmark.explainers as explainers
 
-from scipy.optimize           import check_grad
 from iirsBenchmark.feynman    import Feynman_regressor
-from sklearn.exceptions       import NotFittedError
 from iirsBenchmark.exceptions import NotApplicableException
 
 

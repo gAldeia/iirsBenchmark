@@ -20,7 +20,7 @@ setuptools.setup(
     install_requires = [
         # utility modules
         "numpy==1.18.2",
-        "filelock",
+        "filelock==3.0.12",
         "scipy==1.6.3",
         "jax==0.2.13",
         "jaxlib==0.1.67",
@@ -30,10 +30,10 @@ setuptools.setup(
         "itea==1.0.0",
 
         # explainer modules
-        "shap==0.34.0",
-        "sage-importance",
-        "interpret",
-        "lime",
+        "shap==0.35.0",
+        "sage-importance==0.0.4",
+        "interpret==0.2.7",
+        "lime==0.2.0.1",
     ],
     setup_requires = ["wheel", "pytest-runner"],
     tests_require = [

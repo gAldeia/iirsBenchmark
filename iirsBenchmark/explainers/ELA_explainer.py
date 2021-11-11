@@ -1,7 +1,7 @@
 # Author:  Guilherme Aldeia
 # Contact: guilherme.aldeia@ufabc.edu.br
-# Version: 1.0.0
-# Last modified: 10-10-2021 by Guilherme Aldeia
+# Version: 1.0.1
+# Last modified: 11-11-2021 by Guilherme Aldeia
 
 """
 Explain by Local Approximation explainer.
@@ -32,7 +32,15 @@ class ELA_explainer(Base_explainer):
         # n of closest neighbors evaluated in the linear regression
         self.k = k 
 
-           
+    
+    def _check_fit(self, X, y):
+         
+        assert X.shape[0] >= self.k, \
+            f"Data set too small to be used with given value for k={self.k}." 
+
+        return super()._check_fit(X, y)
+
+
     def _k_closest_neighbors(self, x):
         
         # p1 and p2 must be a 1-dimensional numpy array of same length
@@ -46,10 +54,6 @@ class ELA_explainer(Base_explainer):
         
     def fit(self, X, y):
         self._check_fit(X, y)
-        
-        # This check should be in an overriding implementation of _check_fit() 
-        assert X.shape[0] >= self.k, \
-            f"Data set too small to be used with given value for k={k}." 
 
         self.X_ = X
         self.y_ = y
