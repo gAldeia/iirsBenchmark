@@ -1,7 +1,7 @@
 # Author:  Guilherme Aldeia
 # Contact: guilherme.aldeia@ufabc.edu.br
-# Version: 1.0.0
-# Last modified: 08-20-2021 by Guilherme Aldeia
+# Version: 1.0.1
+# Last modified: 21-11-2021 by Guilherme Aldeia
 
 """
 Linear regressor. This method is considered a white-box for most authors.
@@ -50,6 +50,11 @@ class Linear_regressor(LinearRegression):
         super_fit =  super().fit(X, y)
 
         self.feature_importances_ = self.coef_
+
+        # Useful for model specific explainers that uses information about
+        # selected features
+        self.selected_features_ = np.array(
+            [i for i in range(n_features) if self.coef_[i] != 0.0])
 
         return super_fit
         

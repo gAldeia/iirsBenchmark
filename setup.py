@@ -29,8 +29,8 @@ setuptools.setup(
         "scikit-learn==0.24.2",
         "itea==1.0.0",
 
-        # explainer modules
-        "shap==0.35.0",
+        # explainer modules (fixed versions due deprecation warnings of its dependences)
+        "shap==0.40.0",
         "sage-importance==0.0.4",
         "interpret==0.2.7",
         "lime==0.2.0.1",

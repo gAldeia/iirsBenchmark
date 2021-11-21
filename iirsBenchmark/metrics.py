@@ -158,7 +158,7 @@ def _get_k_most_important(explanation, k):
     return order[:, :k]
 
 
-def jaccard_stability(explainer, x, neighborhood, k):
+def jaccard_stability(explainer, x, neighborhood, k=1):
     """Jaccard adaptation Stability function.
 
     Takes as argument an explanation method, a single observation

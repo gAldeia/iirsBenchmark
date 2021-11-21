@@ -500,7 +500,7 @@ def _explain_local_and_save_data(*,
 
             infidelities = np.array([metrics.infidelity(
                 fitted_explainer_instance.explain_local,
-                fitted_explainer_instance.regressor,
+                fitted_explainer_instance.predictor,
                 X_test[i].reshape(1, -1),
                 metrics.neighborhood(X_test[i].reshape(1, -1), X_train,
                     factor=metrics_factor, size=30),

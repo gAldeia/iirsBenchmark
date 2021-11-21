@@ -1,7 +1,7 @@
 # Author:  Guilherme Aldeia
 # Contact: guilherme.aldeia@ufabc.edu.br
 # Version: 1.0.1
-# Last modified: 11-11-2021 by Guilherme Aldeia
+# Last modified: 21-11-2021 by Guilherme Aldeia
 
 """
 Explain by Local Approximation explainer.
@@ -20,7 +20,8 @@ class ELA_explainer(Base_explainer):
         
         super(ELA_explainer, self).__init__(
             predictor    = predictor,
-            agnostic     = True,
+            agnostic     = ['ITEA_regressor', #'Operon_regressor',
+                'Linear_regressor', 'Lasso_regressor', 'Feynman_regressor'],
             local_scope  = True,
             global_scope = False
         )
@@ -46,8 +47,22 @@ class ELA_explainer(Base_explainer):
         # p1 and p2 must be a 1-dimensional numpy array of same length
         euclidean_dist = lambda p1, p2: np.sqrt(np.sum((p1 - p2)**2))
         
+        # Distance will consider only the subset of features existing in the
+        # regresison model (the model must have a selected_features_ thus
+        # ELA is not entirelly model agnostic).
+        subset_features = self.predictor.selected_features_
+
+        # setting discarded variables to same value so it doesn't affect
+        # the distance calculation
+        x_masked = x.copy()
+        X_masked = self.X_.copy()
+
+        # x is 1d, X is 2d
+        x_masked[subset_features] = 0.0
+        X_masked[:, subset_features] = 0.0
+
         selected = np.argsort(
-            [euclidean_dist(x, xprime) for xprime in self.X_])
+            [euclidean_dist(x_masked, xprime) for xprime in X_masked])
         
         return self.X_[selected[ :self.k], :]
         

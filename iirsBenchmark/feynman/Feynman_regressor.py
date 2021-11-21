@@ -1,7 +1,7 @@
 # Author:  Guilherme Aldeia
 # Contact: guilherme.aldeia@ufabc.edu.br
-# Version: 1.0.0
-# Last modified: 08-20-2021 by Guilherme Aldeia
+# Version: 1.0.1
+# Last modified: 21-11-2021 by Guilherme Aldeia
 
 """
 Implementation of a regressor that takes as argument the name of the 
@@ -46,6 +46,10 @@ class Feynman_regressor(BaseEstimator, RegressorMixin):
         # properly fitted) before making predictions
         self.predict_f_ = lambda X: np.array(
             [self.python_function(X[i, :]) for i in range(len(X))])
+
+        # Useful for model specific explainers that uses information about
+        # selected features
+        self.selected_features_ = np.array(range(X.shape[1]))
 
         return self
         

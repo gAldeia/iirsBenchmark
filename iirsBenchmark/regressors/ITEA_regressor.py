@@ -1,8 +1,8 @@
 
 # Author:  Guilherme Aldeia
 # Contact: guilherme.aldeia@ufabc.edu.br
-# Version: 1.0.0
-# Last modified: 08-20-2021 by Guilherme Aldeia
+# Version: 1.0.1
+# Last modified: 21-11-2021 by Guilherme Aldeia
 
 """
 Symbolic regressor with the IT representation. This method is considered by 
@@ -29,6 +29,7 @@ beyond what the model can do, this class also implements:
 """
 
 import itea.regression
+from itea.inspection import ITExpr_explainer
 
 # jax version 0.2.13
 from jax import grad, vmap
@@ -101,6 +102,17 @@ class ITEA_regressor(itea.regression.ITEA_regressor):
         return self.bestsol_.gradient(
             X, self.tfuncs_dx, logit=False)[0]
         
+
+    def fit(self, X, y):
+        super_fit =  super().fit(X, y)
+
+        # Useful for model specific explainers that uses information about
+        # selected features
+        self.selected_features_ = ITExpr_explainer(
+            itexpr=self.bestsol_, tfuncs=self.tfuncs).selected_features(idx=True)
+
+        return super_fit
+
 
 ITEA_regressor.grid_params = {
     'popsize' : [100, 250, 500],
