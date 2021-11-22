@@ -20,11 +20,23 @@ dependencies:
   # other dependencies, installed via pip
   - pip
   - pip:
-    - numpy>=1.18.2
-    - scikit-learn>=0.23.1
+    # utility modules
+    - numpy=1.18.2,
+    - filelock=3.0.12,
+    - scipy=1.6.3,
+    - jax=0.2.13,
+    - jaxlib=0.1.67,
+
+    # regressor modules
+    - scikit-learn=0.24.2,
+    - itea=1.0.0,
+
+    # explainer modules (fixed versions due deprecation warnings of its dependences)
+    - shap=0.40.0,
+    - sage-importance=0.0.4,
+    - interpret=0.2.7,
+    - lime=0.2.0.1,
+
+    # post hoc analysis
     - matplotlib>=3.2.2
     - pandas>=1.1.0
-    - jax>=0.2.13
-    - jaxlib>=0.1.67
-    - scipy>=1.5.2
-    - itea=1.0.1

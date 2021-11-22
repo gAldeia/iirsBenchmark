@@ -1,8 +1,8 @@
 
 # Author:  Guilherme Aldeia
 # Contact: guilherme.aldeia@ufabc.edu.br
-# Version: 1.0.0
-# Last modified: 10-16-2021 by Guilherme Aldeia
+# Version: 1.0.1
+# Last modified: 21-11-2021 by Guilherme Aldeia
 
 
 """
@@ -480,7 +480,7 @@ def _explain_local_and_save_data(*,
         start_t = time.time()
         try:
             stabilities = np.array([metrics.stability(
-                fitted_explainer_instance.explain_local,
+                fitted_explainer_instance,
                 X_test[i].reshape(1, -1),
                 metrics.neighborhood(X_test[i].reshape(1, -1), X_train,
                     factor=metrics_factor, size=30),
@@ -499,8 +499,7 @@ def _explain_local_and_save_data(*,
         try:
 
             infidelities = np.array([metrics.infidelity(
-                fitted_explainer_instance.explain_local,
-                fitted_explainer_instance.predictor,
+                fitted_explainer_instance,
                 X_test[i].reshape(1, -1),
                 metrics.neighborhood(X_test[i].reshape(1, -1), X_train,
                     factor=metrics_factor, size=30),
@@ -519,7 +518,7 @@ def _explain_local_and_save_data(*,
         try:
 
             jaccards = np.array([metrics.jaccard_stability(
-                fitted_explainer_instance.explain_local,
+                fitted_explainer_instance,
                 X_test[i].reshape(1, -1),
                 metrics.neighborhood(X_test[i].reshape(1, -1), X_train,
                     factor=metrics_factor, size=30),

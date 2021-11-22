@@ -1,7 +1,7 @@
 # Author:  Guilherme Aldeia
 # Contact: guilherme.aldeia@ufabc.edu.br
-# Version: 1.0.0
-# Last modified: 08-20-2021 by Guilherme Aldeia
+# Version: 1.0.1
+# Last modified: 21-11-2021 by Guilherme Aldeia
 
 """
 implementation of the metrics that will be used to assess the regressors
@@ -92,6 +92,19 @@ def neighborhood(x, X_train, factor, size=100):
         x, np.cov(X_train.T)*factor, size=size)
 
 
+def _stability(original_explanation, neighborhood_explanations):
+    """Inner usage, takes the explanations already calculated, instead of
+    calculating it while measuring the stability. This is intended for internal
+    usage, and can be used when there is a lot of repeated explanations
+    being made.
+
+    To better understand this method arguments, check how it is called by
+    the public method.
+    """
+    return np.mean(np.power(
+        _norm_p2(neighborhood_explanations - original_explanation), 2))
+
+
 def stability(explainer, x, neighborhood):
     """Stability function.
 
@@ -104,13 +117,13 @@ def stability(explainer, x, neighborhood):
     original explanation and every sampled neighbor.
     """
     
-    original_explanation = explainer(x)
+    original_explanation = explainer.explain_local(x)
+    neighborhood_explanations = explainer.explain_local(neighborhood)
 
     # OBS: explainers should return protected explanations to avoid numeric
     # errors in the metrics. This should be implemented for every explainer.
     # the base class has a simple treatment.
-    return np.mean(np.power(
-        _norm_p2(explainer(neighborhood) - original_explanation), 2))
+    return _stability(original_explanation, neighborhood_explanations)
 
 
 def _jaccard_index(As, B):
@@ -123,11 +136,10 @@ def _jaccard_index(As, B):
     value equals to 0 means that they are completely
     different.
 
-    As é uma matriz de importâncias (n_samples, n_features),
-    e B é uma matriz de importância de 1 elemento.
-    
-    Vai ser retornada uma matriz (n_obs, 1) com o índice de 
-    jaccard para cada observação
+    As is an array of importances (n_samples, n_features),
+    and B is a 1-element importance matrix.
+
+    Returns an array (n_obs, 1) with the index of jaccard for each observation
     """
 
     jaccard_indexes = np.zeros(As.shape[0])
@@ -158,6 +170,19 @@ def _get_k_most_important(explanation, k):
     return order[:, :k]
 
 
+def _jaccard_stability(original_subset, neighborhood_subset):
+    """Inner usage, takes the explanations subsets already calculated,
+    instead of calculating it while measuring the Jaccard stability. This is
+    intended for internal usage, and can be used when there is a lot of
+    repeated explanations being made.
+
+    To better understand this method arguments, check how it is called by
+    the public method.
+    """
+    
+    return np.mean(_jaccard_index(neighborhood_subset, original_subset))
+
+
 def jaccard_stability(explainer, x, neighborhood, k=1):
     """Jaccard adaptation Stability function.
 
@@ -171,19 +196,47 @@ def jaccard_stability(explainer, x, neighborhood, k=1):
     subset of features between the explanation of the original data
     and its neighbors.
     """
-    original_explanation = explainer(x)
-    
-    original_jaccard_set = _get_k_most_important(original_explanation, k)
 
-    return np.mean(_jaccard_index(_get_k_most_important(
-        explainer(neighborhood), k), original_jaccard_set))
+    original_subset     = _get_k_most_important(
+        explainer.explain_local(x), k)
+        
+    neighborhood_subset = _get_k_most_important(
+        explainer.explain_local(neighborhood), k)
+
+    return _jaccard_stability(original_subset, neighborhood_subset)
 
 
-def infidelity(explainer, predictor, x, neighborhood):
-    
-    original_explanation = explainer(x)
-    original_prediction  = predictor.predict(x)
-    
+def _infidelity(original_prediction, original_explanation,
+    neighborhood_prediction, neighborhood_perturbation):
+    """Inner usage, takes the explanations subsets already calculated,
+    instead of calculating it while measuring the Jaccard stability. This is
+    intended for internal usage, and can be used when there is a lot of
+    repeated explanations being made.
+
+    To better understand this method arguments, check how it is called by
+    the public method.
+    """
+
     return np.mean(np.power(
-            np.dot((x - neighborhood), np.squeeze(original_explanation)) - 
-            (original_prediction - predictor.predict(neighborhood)), 2))
+            np.dot(neighborhood_perturbation, original_explanation) - 
+            (original_prediction - neighborhood_prediction), 2))
+
+
+def infidelity(explainer, x, neighborhood):
+    """Infidelity measure.
+
+    Takes as argument an explanation method, a single observation
+    x of shape (n_features, ), the neighborhood as a matrix of
+    shape (n_neighbors, n_features), and the size of the subset being
+    considered k
+
+    Returns the infidelity measure.
+    """
+
+    original_explanation      = np.squeeze(explainer.explain_local(x))
+    original_prediction       = explainer.predictor.predict(x)
+    neighborhood_prediction   = explainer.predictor.predict(neighborhood)
+    neighborhood_perturbation = (x - neighborhood)
+
+    return _infidelity(original_prediction, original_explanation,
+        neighborhood_prediction, neighborhood_perturbation)

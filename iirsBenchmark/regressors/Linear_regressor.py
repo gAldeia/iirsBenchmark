@@ -23,6 +23,12 @@ beyond what the scikit model can do, this class also implements:
 * `feature_importances_` attribute, representing the importances calculated by
     an intrinsic explanation method (the Partial Effect, used in the context
     of regression analysis).
+* `selected_features_`: some model-specific explainers can rely on using a
+    subset of the original features to explain the model (i.g. ELA). This
+    attribute is created after fitting the regressor, and indicates the indexes
+    of the features that are actually being considered by the model when making
+    predictions, and it is implemented to all regressors that creates a 
+    mathematical expression that can be analysed to extract this information.
 """
 
 from sklearn.linear_model import LinearRegression
@@ -50,6 +56,8 @@ class Linear_regressor(LinearRegression):
         super_fit =  super().fit(X, y)
 
         self.feature_importances_ = self.coef_
+
+        n_features = X.shape[1]
 
         # Useful for model specific explainers that uses information about
         # selected features
