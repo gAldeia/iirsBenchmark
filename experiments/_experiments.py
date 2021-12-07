@@ -19,7 +19,7 @@ import pandas as pd
 
 from filelock import FileLock
 
-from iirsBenchmark            import metrics
+from iirsBenchmark            import expl_measures # explanation measures
 from iirsBenchmark.exceptions import NotApplicableException
 
 from sklearn.exceptions      import NotFittedError
@@ -162,8 +162,7 @@ def run_or_retrieve_gridsearch(*,
 
     X_train, y_train = train_data[:, :-1], train_data[:, -1]
     
-    # Creating an instance with fixed seed for reproducibility
-    reg = regressor_class(random_state=42)
+    reg = regressor_class(random_state=None)
 
     # gridsearch should not be parallelized to avoid nested parallelization.
     # by default gridsearch uses the regressor.score() method to find the
@@ -253,13 +252,13 @@ def _fit_regressor_and_save_data(*,
             )
 
         data = {
-            'rmse_train' : metrics.RMSE(
+            'rmse_train' : expl_measures.RMSE(
                               regressor_instance.predict(X_train), y_train),
-            'rmse_test' : metrics.RMSE(
+            'rmse_test' : expl_measures.RMSE(
                               regressor_instance.predict(X_test), y_test),
-            'r2_train' : metrics.R2(
+            'r2_train' : expl_measures.R2(
                               regressor_instance.predict(X_train), y_train),
-            'r2_test' : metrics.R2(
+            'r2_test' : expl_measures.R2(
                               regressor_instance.predict(X_test), y_test),
             'dataset' : ds_name,
             'rep' : rep_number,
@@ -326,7 +325,7 @@ def _explain_global_and_save_data(*,
     the regressor
     """
     
-    columns = ['dataset', 'rep', 'explainer', 'explanation', 'tot_time']
+    columns = ['dataset', 'rep', 'explainer', 'explanation']
 
     global_folder = f'{results_path}/3.explanation/3.2.global'
     pred_name = fitted_regressor_instance.__class__.__name__
@@ -394,8 +393,7 @@ def _explain_global_and_save_data(*,
                 'dataset'     : ds_name,
                 'rep'         : rep_number,
                 'explainer'   : fitted_explainer_instance.__class__.__name__,
-                'explanation' : str(explanations).replace('\n', ' '),
-                'tot_time'    : end_t - start_t
+                'explanation' : str(explanations).replace('\n', ' ')
             }
 
             global_df = global_df.append( pd.Series(data), ignore_index=True)
@@ -456,94 +454,83 @@ def _explain_local_and_save_data(*,
         infidelity_file = f'{local_path}{regressor_name}_infidelity.csv'
         jaccard_file    = f'{local_path}{regressor_name}_jaccard.csv'
         
-        # Explanations ---------------------------------------------------------
+        # Well explain all instances locally and the neighborhood for the
+        # robustness metrics 1 time only.
+
         explanations = None
-        start_t = time.time()
+        stabilities = None
+        infidelities = None
+        jaccards = None
 
         try:
             fitted_explainer_instance._check_fit(X_test, y_test)
-        except NotApplicableException as e:
-            explanations = ("Explainer is not agnostic and does not "
-                            "support the regressor. ")
+        except (NotApplicableException, NotFittedError) as e:
+            jaccards = stabilities = infidelities = explanations = \
+                "Explainer is not agnostic and does not support the regressor."
         else:
             try:
+                # Explaining the test data
                 explanations = fitted_explainer_instance.explain_local(X_test)
-            except NotApplicableException as e:
-                explanations = "Explainer does not support local explanations."
+
+                # For each test there will be a neighborhood to use in the 
+                # measures
+                nbhoods = [expl_measures.neighborhood(
+                    X.reshape(1, -1), X_train, factor=metrics_factor, size=30)
+                    for X in X_test]
+
+                nbhoods_explanations = [fitted_explainer_instance.explain_local(n) 
+                    for n in nbhoods]
+
+                original_subsets = [
+                    expl_measures._get_k_most_important(e.reshape(1, -1), k=1)
+                    for e in explanations]
+
+                nbhoods_subsets = [expl_measures._get_k_most_important(n, k=1) 
+                    for n in nbhoods_explanations]
+
+                original_predictions = fitted_explainer_instance.predictor.predict(X_test)
+
+                nbhoods_predictions = [
+                    fitted_explainer_instance.predictor.predict(n)
+                    for n in nbhoods]
+
+                nbhoods_perturbations = [X - nb
+                    for X, nb in zip(X_test, nbhoods)]
+
+                stabilities = np.array([expl_measures._stability(e, n)
+                    for (e, n) in zip(explanations, nbhoods_explanations)
+                ])
+
+                jaccards = np.array([expl_measures._jaccard_stability(
+                    o_subset, n_subset)
+                    for (o_subset, n_subset) in zip(
+                        original_subsets, nbhoods_subsets)
+                ])
+
+                infidelities = np.array([expl_measures._infidelity(op, oe, np, ni)
+                    for (op, oe, np, ni) in zip(
+                        original_predictions, explanations,
+                        nbhoods_predictions, nbhoods_perturbations)
+                ])
+
+            except (NotApplicableException, NotFittedError) as e:
+                jaccards = stabilities = infidelities = explanations = \
+                    "Explainer does not support local explanations."
+
             except Exception as e:
-                explanations = str(e)
-
-        explanation_time = time.time() - start_t
-
-        # Stability ------------------------------------------------------------
-        stabilities = None
-        start_t = time.time()
-        try:
-            stabilities = np.array([metrics.stability(
-                fitted_explainer_instance,
-                X_test[i].reshape(1, -1),
-                metrics.neighborhood(X_test[i].reshape(1, -1), X_train,
-                    factor=metrics_factor, size=30),
-            ) for i in range(X_test.shape[0])])
-
-        except (NotApplicableException, NotFittedError) as e:
-                stabilities = "Explainer does not support local explanations."
-        except Exception as e:
-            stabilities = str(e)
+                jaccards = stabilities = infidelities = explanations = str(e)
         
-        stabilities_time = time.time() - start_t
-        
-        # infidelity -----------------------------------------------------------
-        infidelities = None
-        start_t = time.time()
-        try:
-
-            infidelities = np.array([metrics.infidelity(
-                fitted_explainer_instance,
-                X_test[i].reshape(1, -1),
-                metrics.neighborhood(X_test[i].reshape(1, -1), X_train,
-                    factor=metrics_factor, size=30),
-            ) for i in range(X_test.shape[0])])
-
-        except (NotApplicableException, NotFittedError) as e:
-            infidelities = 'Explainer does not support local explanations.'
-        except Exception as e:
-            infidelities = str(e)
-
-        infidelities_time = time.time() - start_t
-
-        # jaccard stability ----------------------------------------------------
-        jaccards = None
-        start_t = time.time()
-        try:
-
-            jaccards = np.array([metrics.jaccard_stability(
-                fitted_explainer_instance,
-                X_test[i].reshape(1, -1),
-                metrics.neighborhood(X_test[i].reshape(1, -1), X_train,
-                    factor=metrics_factor, size=30),
-                k=1
-            ) for i in range(X_test.shape[0])])
-
-        except (NotApplicableException, NotFittedError) as e:
-            jaccards = 'Explainer does not support local explanations.'
-
-        except Exception as e:
-            jaccards = str(e)
-        
-        jaccards_time = time.time() - start_t
-
         # Reporting all metrics
         columns = ['dataset', 'rep', 'explainer'] + \
-            [f'obs_{i}' for i in range(X_test.shape[0])] + ['tot_time']
+            [f'obs_{i}' for i in range(X_test.shape[0])]
 
         with FileLock(f'{results_path}/_experiments_lock.lock'):
 
-            for file, file_data, tot_time in [
-                (local_file, explanations, explanation_time),
-                (stability_file, stabilities, stabilities_time),
-                (infidelity_file, infidelities, infidelities_time),
-                (jaccard_file, jaccards, jaccards_time)
+            for file, file_data in [
+                (local_file, explanations),
+                (stability_file, stabilities),
+                (infidelity_file, infidelities),
+                (jaccard_file, jaccards)
             ]:
 
                 if os.path.isfile(file):
@@ -564,7 +551,6 @@ def _explain_local_and_save_data(*,
                     'dataset'   : ds_name,
                     'rep'       : rep_number,
                     'explainer' : fitted_explainer_instance.__class__.__name__,
-                    'tot_time'  : tot_time
                 }
                 
                 for i in range(X_test.shape[0]):
@@ -619,7 +605,7 @@ def regressor_experiment(ds_name, regressor_class, explainer_classes,
         train_data         = (X_train, y_train), 
         test_data          = (X_test, y_test), 
         regressor_instance = regressor_class(
-            **best_configuration, random_state=rep_number),
+            **best_configuration, random_state=None),
         rep_number         = rep_number,
         results_path       = results_path
     )

@@ -1,7 +1,7 @@
 # Author:  Guilherme Aldeia
 # Contact: guilherme.aldeia@ufabc.edu.br
-# Version: 1.0.1
-# Last modified: 21-11-2021 by Guilherme Aldeia
+# Version: 1.0.2
+# Last modified: 23-11-2021 by Guilherme Aldeia
 
 """
 implementation of the metrics that will be used to assess the regressors
@@ -21,44 +21,15 @@ __all__ = [
     # Auxiliary methods for explanation metrics
     'neighborhood', 
 
-    # Explanation quality
+    # Explanation robustness
     'stability', 'jaccard_stability', 'infidelity',
 
-    # Comparison between two explanations (intended to be used between ground
-    # truth and a predictor with the same explainer)
-    'cos_similarity'
+    # Explanation quality
+    'cossim_expl', 'RMSE_expl'
 ]
 
 
-def RMSE(y, yhat):
-
-    return mean_squared_error(y, yhat, squared=False)
-
-
-def R2 (y, yhat):
-    
-    return r2_score(y, yhat)
-
-
-def cos_similarity(y, yhat):
-    
-    return cosine_similarity(y, yhat)
-
-
-def _norm_p2(vector):
-    """p2 norm of a vector.
-
-    the vector should be an array of shape (n_obs, n_samples).
-    
-    vai ser retornada uma matriz (n_obs, 1) com a norma p2
-    calculada para cada observação
-    """
-
-    return np.sqrt(np.sum(
-        np.abs(np.power(vector, 2)), axis=1
-    )).reshape(-1, 1)
-
-
+# Neighborhood generation ------------------------------------------------------
 def neighborhood(x, X_train, factor, size=100):
     """Method to create samples around a given observation x.
 
@@ -90,6 +61,42 @@ def neighborhood(x, X_train, factor, size=100):
 
     return np.random.multivariate_normal(
         x, np.cov(X_train.T)*factor, size=size)
+
+
+# Regression metrics -----------------------------------------------------------
+def RMSE(y, yhat):
+
+    return mean_squared_error(y, yhat, squared=False)
+
+
+def R2 (y, yhat):
+    
+    return r2_score(y, yhat)
+
+
+# Quality metrics (related to groundtruth) -------------------------------------
+def RMSE_expl(y, yhat):
+    return mean_squared_error(y, yhat, squared=False)
+
+
+def cossim_expl(y, yhat):
+    
+    return cosine_similarity(y, yhat)
+
+
+# Robustness metrics and auxiliary methods -------------------------------------
+def _norm_p2(vector):
+    """p2 norm of a vector.
+
+    the vector should be an array of shape (n_obs, n_samples).
+    
+    vai ser retornada uma matriz (n_obs, 1) com a norma p2
+    calculada para cada observação
+    """
+
+    return np.sqrt(np.sum(
+        np.abs(np.power(vector, 2)), axis=1
+    )).reshape(-1, 1)
 
 
 def _stability(original_explanation, neighborhood_explanations):
@@ -165,7 +172,7 @@ def _get_k_most_important(explanation, k):
     """
 
     # Reversing the order so its in descending order
-    order = np.argsort(explanation, axis=1)[::-1]
+    order = np.argsort(explanation, axis=1)[::-1].astype(int)
 
     return order[:, :k]
 
@@ -180,7 +187,7 @@ def _jaccard_stability(original_subset, neighborhood_subset):
     the public method.
     """
     
-    return np.mean(_jaccard_index(neighborhood_subset, original_subset))
+    return np.mean(_jaccard_index(original_subset, neighborhood_subset))
 
 
 def jaccard_stability(explainer, x, neighborhood, k=1):

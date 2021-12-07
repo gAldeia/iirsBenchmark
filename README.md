@@ -12,10 +12,42 @@ Benchmark proposed in the paper "Interpretability in Symbolic Regression: a benc
 
 ## Installation
 
-Just clone the repository and, inside its root, type:
+First, you need to clone the repository.
 
-```
-python -m pip install .
+Inside the root, execute the following commands (on linux).
+
+```bash
+# make sure you have this
+sudo apt-get install build-essential
+
+# Creating a conda environment
+conda env create -f environment.yml
+conda activate iirs-env
+
+# Installing Operon first, it is the only dependence that is not on pypi
+
+# Use gcc-9 (or later)
+export CC=gcc-9
+export CXX=gcc-9
+
+# clone operon
+cd iirsBenchmark/regressors
+git clone https://github.com/heal-research/operon
+cd operon
+
+# run cmake with options
+mkdir build; cd build;
+cmake .. -DCMAKE_BUILD_TYPE=Release  -DBUILD_PYBIND=ON -DUSE_OPENLIBM=ON -DUSE_SINGLE_PRECISION=ON -DCERES_TINY_SOLVER=ON
+
+# build
+make VERBOSE=1 -j pyoperon
+
+# install python package
+make install
+
+# (going back to root and) Executing the local installation 
+cd ../../../..
+make
 ```
 
 

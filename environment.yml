@@ -1,9 +1,13 @@
 name: iirs-env
 channels:
   - conda-forge
+  - defaults
 dependencies:
   # python version compatible with Operon
-  - python=3.9.1
+  - python=3.7
+  
+  # install python distutils and build packages
+  - python-devtools
 
   # Requierements to build Operon and create the python bindings
   - cmake=3.19.1
@@ -21,22 +25,25 @@ dependencies:
   - pip
   - pip:
     # utility modules
-    - numpy=1.18.2,
-    - filelock=3.0.12,
-    - scipy=1.6.3,
-    - jax=0.2.13,
-    - jaxlib=0.1.67,
+    - numpy==1.20.3
+    - filelock==3.0.12
+    - scipy==1.6.3
+    - jax==0.2.13
+    - jaxlib==0.1.67
 
     # regressor modules
-    - scikit-learn=0.24.2,
-    - itea=1.0.0,
+    - scikit-learn==0.24.2
+    - itea==1.0.0
 
     # explainer modules (fixed versions due deprecation warnings of its dependences)
-    - shap=0.40.0,
-    - sage-importance=0.0.4,
-    - interpret=0.2.7,
-    - lime=0.2.0.1,
+    - shap==0.40.0
+    - sage-importance==0.0.4
+    - interpret==0.2.7
+    - lime==0.2.0.1
 
     # post hoc analysis
-    - matplotlib>=3.2.2
-    - pandas>=1.1.0
+    - notebook
+    - nb_conda_kernels
+    - matplotlib==3.4.2
+    - seaborn==0.11.1
+    - pandas==1.1.0

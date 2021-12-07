@@ -4,7 +4,7 @@ import pandas as pd
 import numpy as np
 
 import iirsBenchmark.explainers as explainers
-from iirsBenchmark.metrics import (
+from iirsBenchmark.expl_measures import (
     stability, jaccard_stability, infidelity, neighborhood)
 
 from iirsBenchmark.feynman    import Feynman_regressor
@@ -29,7 +29,6 @@ def load_samples_by_ds_name(ds_name):
     [stability, (0.0, np.inf)],
     [infidelity, (0.0, np.inf)],
     [jaccard_stability, (0.0, 1.0)],
-    
 ])
 @pytest.mark.parametrize("explainer,ds_name", zip(
     explainers.__all__,

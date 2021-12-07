@@ -100,8 +100,8 @@ def test_gradients(regressor, ds_name):
     
     predictor = regressor_class(**{
         # ITEA
-        'gens' : 10,
-        'popsize' : 10,
+        'gens' : 25,
+        'popsize' : 25,
 
         # stop warnings when label is missing
         'labels' : [f'x_{i}' for i in range(X.shape[1])],
