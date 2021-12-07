@@ -5,7 +5,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setuptools.setup(
     name = "iirsBenchmark",
-    version = "1.0.0",
+    version = "1.1.0",
     author = "Guilherme Aldeia",
     packages = setuptools.find_packages(
         include = ['./iirsBenchmark'],
@@ -27,7 +27,7 @@ setuptools.setup(
 
         # regressor modules
         "scikit-learn==0.24.2",
-        "itea==1.0.0",
+        "itea==1.1.0",
 
         # explainer modules (fixed versions due deprecation warnings of its dependences)
         "shap==0.40.0",

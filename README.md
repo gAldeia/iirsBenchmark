@@ -91,10 +91,6 @@ print(linear.stochastic_executions) # False
 
 print(itea.to_str())   # will print a symbolic equation
 print(linear.to_str()) # will print a linear regression equation
-<<<<<<< HEAD
-=======
-
->>>>>>> fb45b23caa9b697d754b0fe961d4b86a5e3424b1
 ```
 
 The regressors are used just like any scikit-learn regressor, but our implementations extends those classes by adding a few more attributes and methods in the interpretability context:

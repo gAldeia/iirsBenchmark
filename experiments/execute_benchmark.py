@@ -113,7 +113,7 @@ if __name__ == '__main__':
     input()
 
     # Groundtruth --------------------------------------------------------------
-    if True: # set to False to skip, set to True to execute
+    if False: # set to False to skip, set to True to execute
 
         print("Executing the explainers for the groundtruth expression")
 
@@ -138,7 +138,7 @@ if __name__ == '__main__':
             cpus_to_use, groundtruth_configurations, worker_groundtruth)
         
     # gridsearch ---------------------------------------------------------------
-    if True: # set to False to skip, set to True to execute
+    if False: # set to False to skip, set to True to execute
         
         # gridsearch should be completely executed before the final experiments
         # to avoid simultaneous gridsearch evaluation on the same 

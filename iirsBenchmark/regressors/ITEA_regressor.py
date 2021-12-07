@@ -1,8 +1,8 @@
 
 # Author:  Guilherme Aldeia
 # Contact: guilherme.aldeia@ufabc.edu.br
-# Version: 1.0.1
-# Last modified: 21-11-2021 by Guilherme Aldeia
+# Version: 1.1.0
+# Last modified: 07-12-2021 by Guilherme Aldeia
 
 """
 Symbolic regressor with the IT representation. This method is considered by 
@@ -41,26 +41,6 @@ from itea.inspection import ITExpr_explainer
 from jax import grad, vmap
 import jax.numpy as jnp 
 
-from sklearn.metrics import mean_squared_error, r2_score
-
-# Currently (08-20-2021) the ITEA does not support changing the evaluation
-# metric for the training (and uses RMSE). Below is a workaround to change it
-# to MSE (or R2 if needed)
-
-class ITExpr_regressor(itea.regression.ITExpr_regressor):
-    def __init__(self, *, expr, tfuncs, labels = [], **kwargs):
-
-        super(ITExpr_regressor, self).__init__(
-            expr   = expr,
-            tfuncs = tfuncs,
-            labels = labels,
-            **kwargs
-        )
-
-        # Here we can set the metric for the fitness function
-        self.fitness_f = lambda pred, y: mean_squared_error(
-            pred, y, squared=True)
-
 
 # ITEA_regressor searches for the best ITExpr_regressor
 class ITEA_regressor(itea.regression.ITEA_regressor):
@@ -90,13 +70,7 @@ class ITEA_regressor(itea.regression.ITEA_regressor):
             gens=gens, popsize=popsize, tfuncs=tfuncs, tfuncs_dx=tfuncs_dx,
             expolim=expolim, max_terms=max_terms,
             simplify_method=simplify_method, random_state=random_state,
-            verbose=verbose, labels=labels, **kwargs)
-
-        self.itexpr_class = itea.regression.ITExpr_regressor
-
-        # For ITEA we need to specify if a smaller (or greater) fitness is
-        # better
-        self.greater_is_better = False
+            verbose=verbose, labels=labels, fitness_f='mse', **kwargs)
 
 
     def to_str(self):
