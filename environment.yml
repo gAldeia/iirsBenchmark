@@ -47,3 +47,4 @@ dependencies:
     - matplotlib==3.4.2
     - seaborn==0.11.1
     - pandas==1.1.0
+    - pyparsing==2.4.7
