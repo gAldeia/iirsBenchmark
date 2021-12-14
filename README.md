@@ -146,11 +146,11 @@ The feynman equations can be used just as any regressor in the module, but takes
 A table of all equations can be found [here](https://github.com/gAldeia/iirsBenchmark/blob/7815352a92d52e27dde99ec273b0d9b3c63a47c6/datasets/FeynmanEquations.csv), where the **Filename** is the column with possible data set names argument.
 
 
-## Explanation robustness metrics
+## Explanation robustness measures
 
-We strongly advise to read the Section 3.1 of our paper to fully understand how this metrics work, and also check their implementation in ``iirsBenchmark.metrics``. Although we did not propose any of this metrics, we have adaptated them when implementing in _iirsBenchmark_.
+We strongly advise to read the Section 3.1 of our paper to fully understand how this measures work, and also check their implementation in ``iirsBenchmark.expl_measures``. Although we did not propose any of this measures, we have adaptated them when implementing in _iirsBenchmark_.
 
-Three different explanation metrics were implemented:
+Three different explanation measures were implemented:
 
 ### Stability
 
@@ -169,24 +169,24 @@ The Jaccard Index measures how similar two sets are, by calculating the ratio of
 
 ### Usage
 
-To use this metrics you need a fitted regressor and explainer, and them only work for local explanations:
+To use this measures you need a fitted regressor and explainer, and them only work for local explanations:
 
 ```python
-from iirsBenchmark import metrics
+from iirsBenchmark import expl_measures
 
 # you need to provide a neighborhood to the observation being evaluated
-# with those metrics
+# with those measures
 
 obs_to_explain = X[3].reshape(1, -1)
 
-neighbors = metrics.neighborhood(
+neighbors = expl_measures.neighborhood(
     obs_to_explain, # The observation 
     X,              # Training data to calculate the multivariate normal distribution
     factor=0.001,   # spread of the neighbors
     size=30         # number of neighbors to sample
 )
 
-metrics.stability(
+expl_measures.stability(
     shap.explain_local, # the explainer we want to evaluate
     obs_to_explain,     # the observation to explain
     neighbors           # sampled neighbors to evaluate the metric
@@ -229,11 +229,11 @@ We would like to recognize the importance of their work. To get to know each dep
 * [**ITEA**] [Interaction–Transformation Evolutionary Algorithm for Symbolic Regression](https://direct.mit.edu/evco/article/29/3/367/97354/Interaction-Transformation-Evolutionary-Algorithm);
 * [**Operon**] [Operon C++: an efficient genetic programming framework for symbolic regression](https://dl.acm.org/doi/10.1145/3377929.3398099);
 
-### Metrics
+### Measures
 
 * [**Stability**] [Regularizing Black-box Models for Improved Interpretability](https://papers.nips.cc/paper/2020/hash/770f8e448d07586afbf77bb59f698587-Abstract.html);
-* [**Infidelity**] [On the (In)fidelity and Sensitivity of Explanations](https://proceedings.neurips.cc/paper/2019/file/a7471fdc77b3435276507cc8f2dc2569-Paper.pdf)
-* [**Jaccard Index**] [S-LIME: Stabilized-LIME for Model Explanation](https://arxiv.org/abs/2106.07875)
+* [**Infidelity**] [On the (In)fidelity and Sensitivity of Explanations](https://proceedings.neurips.cc/paper/2019/file/a7471fdc77b3435276507cc8f2dc2569-Paper.pdf);
+* [**Jaccard Index**] [S-LIME: Stabilized-LIME for Model Explanation](https://arxiv.org/abs/2106.07875).
 
 
 ## Comments
