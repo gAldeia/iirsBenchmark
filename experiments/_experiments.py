@@ -1,12 +1,15 @@
 
 # Author:  Guilherme Aldeia
 # Contact: guilherme.aldeia@ufabc.edu.br
-# Version: 1.0.1
-# Last modified: 21-11-2021 by Guilherme Aldeia
+# Version: 1.0.3
+# Last modified: 01-01-2022 by Guilherme Aldeia
 
 
 """
-Gridsearch files
+Experiment files.
+
+Every public method must take the ds_name and ds_collection as a tuple 
+in the 'ds_info' argument. Private methods cares only about the ds_name.
 """
 
 
@@ -17,13 +20,26 @@ import tempfile
 import numpy  as np
 import pandas as pd
 
+from glob import glob
+
 from filelock import FileLock
+
+from sklearn.exceptions      import NotFittedError
+from sklearn.model_selection import GridSearchCV
+
+from sklearn.metrics import (explained_variance_score, mean_squared_error,
+                             r2_score, max_error, mean_absolute_error)
+from scipy.stats import pearsonr
 
 from iirsBenchmark            import expl_measures # explanation measures
 from iirsBenchmark.exceptions import NotApplicableException
 
-from sklearn.exceptions      import NotFittedError
-from sklearn.model_selection import GridSearchCV
+from iirsBenchmark.groundtruth  import Feynman_regressor
+from iirsBenchmark.groundtruth  import GPbenchmark_regressor
+
+
+def NMSE(y, yhat):
+    return mean_squared_error(yhat, y) / np.var(y)
 
 
 def print_informations(*, p_id, task, regressor, explainer,
@@ -42,15 +58,15 @@ def print_informations(*, p_id, task, regressor, explainer,
         print("|" + 78*"." + "|")  
 
     print("| {:5d} | {:10s} | {:10s} | {:16s} | {:10s} | {:10s} |".format(
-        p_id, task, regressor, explainer, ds_name, rep_number))
+        p_id, task, regressor[:10], explainer[:16], ds_name[:10], rep_number))
     
     print("|{:^78s}|".format(message))
     print("+" + 78*"-" + "+")
 
 
 def run_or_retrieve_gridsearch(*,
-    ds_name, regressor_class, results_path, datasets_path, verbose=1):
-    
+    ds_info, regressor_class, results_path, datasets_path, verbose=1):
+
     """Performs a gridsearch (if is the first time called for the given
     regressor and dataset) or retrieve the last result and returns the best
     configuration as a dictionary.
@@ -60,6 +76,8 @@ def run_or_retrieve_gridsearch(*,
     given data set and return the configuration that best maximizes the R2
     metric on the cross validation.
     """
+
+    ds_name, ds_collection = ds_info
 
     # this method creates an auxiliary file in results_path/1.grisearch
     # to save/retrieve the best configurations. The columns are the parameters
@@ -90,7 +108,7 @@ def run_or_retrieve_gridsearch(*,
                     print_informations(
                         p_id = os.getpid(),
                         task = "gridsearch",
-                        regressor = regressor_class.__name__[:10],
+                        regressor = regressor_class.__name__,
                         explainer = '--',
                         ds_name = ds_name,
                         rep_number = str('--'),
@@ -146,7 +164,7 @@ def run_or_retrieve_gridsearch(*,
             print_informations(
                 p_id = os.getpid(),
                 task = "gridsearch",
-                regressor = regressor_class.__name__[:10],
+                regressor = regressor_class.__name__,
                 explainer = '--',
                 ds_name = ds_name,
                 rep_number = str('--'),
@@ -157,8 +175,12 @@ def run_or_retrieve_gridsearch(*,
     # loading train data (again, pandas is not thread safe)
     with FileLock(f'{results_path}/_experiments_lock.lock'):
         train_data = pd.read_csv(
-            f'{datasets_path}/train/{ds_name}_UNI.csv', sep=',', header=0,
-            index_col=False).values
+            # Train data will be the first file that matches the name 
+            # (this is because we have different sufixes in the data sets name,
+            # indicating how the data was generated)
+            glob(f'{datasets_path}/{ds_collection}/train/{ds_name}_*.csv')[0],
+            sep=',', header=0, index_col=False
+        ).values
 
     X_train, y_train = train_data[:, :-1], train_data[:, -1]
     
@@ -206,8 +228,13 @@ def _fit_regressor_and_save_data(*,
     X_test, y_test   = test_data
 
     # Creating or recovering the results file
-    columns = ['dataset', 'rep', 'rmse_train', 'rmse_test',
-        'r2_train', 'r2_test', 'tot_time', 'text_representation']
+    columns = ['dataset', 'rep', 'rmse_train', 'rmse_test', 'mae_train', 'mae_test',
+        'nmse_train', 'nmse_test', 'r2_train', 'r2_test',
+        'max_error_train', 'max_error_test', 
+        'pearson_corr_train', 'pearson_corr_test',
+        'pearson_p_train', 'pearson_p_test',
+        'explained_variance_score_train', 'explained_variance_score_test', 
+        'tot_time', 'text_representation']
 
     regression_file = (f'{results_path}/2.regression/'
                        f'{regressor_instance.__class__.__name__}.csv')
@@ -217,7 +244,7 @@ def _fit_regressor_and_save_data(*,
             print_informations(
                 p_id       = os.getpid(),
                 task       = 'fit n eval', 
-                regressor  = regressor_instance.__class__.__name__[:10],
+                regressor  = regressor_instance.__class__.__name__,
                 explainer  = '--',
                 ds_name    = ds_name,
                 rep_number = str(rep_number),
@@ -250,16 +277,49 @@ def _fit_regressor_and_save_data(*,
                     (regression_df['rep']==rep_number)
                 ].index
             )
+        pearson_train, p_train = pearsonr(
+                regressor_instance.predict(X_train), y_train)
+
+        pearson_test, p_test = pearsonr(
+                regressor_instance.predict(X_test), y_test)
 
         data = {
-            'rmse_train' : expl_measures.RMSE(
-                              regressor_instance.predict(X_train), y_train),
-            'rmse_test' : expl_measures.RMSE(
-                              regressor_instance.predict(X_test), y_test),
-            'r2_train' : expl_measures.R2(
-                              regressor_instance.predict(X_train), y_train),
-            'r2_test' : expl_measures.R2(
-                              regressor_instance.predict(X_test), y_test),
+            'rmse_train' : mean_squared_error(
+                regressor_instance.predict(X_train), y_train, squared=False),
+            'rmse_test' : mean_squared_error(
+                regressor_instance.predict(X_test), y_test, squared=False),
+
+            'mae_train' : mean_absolute_error(
+                regressor_instance.predict(X_train), y_train),
+            'mae_test' : mean_absolute_error(
+                regressor_instance.predict(X_test), y_test),
+
+            'nmse_train' : NMSE(
+                regressor_instance.predict(X_train), y_train),
+            'nmse_test' : NMSE(
+                regressor_instance.predict(X_test), y_test),
+
+            'pearson_corr_train' : pearson_train,
+            'pearson_corr_test' : pearson_test,
+
+            'pearson_p_train' : p_train,
+            'pearson_p_test' : p_test,
+
+            'max_error_train' : max_error(
+                regressor_instance.predict(X_train), y_train),
+            'max_error_test' : max_error(
+                regressor_instance.predict(X_test), y_test),
+
+            'explained_variance_score_train' : explained_variance_score(
+                regressor_instance.predict(X_train), y_train),
+            'explained_variance_score_test' : explained_variance_score(
+                regressor_instance.predict(X_test), y_test),
+
+            'r2_train' : r2_score(
+                regressor_instance.predict(X_train), y_train),
+            'r2_test' : r2_score(
+                regressor_instance.predict(X_test), y_test),
+                
             'dataset' : ds_name,
             'rep' : rep_number,
             'tot_time' : end_t - start_t,
@@ -274,7 +334,7 @@ def _fit_regressor_and_save_data(*,
     return regressor_instance
 
 
-def _fit_explianer(*, 
+def _fit_explainer(*, 
     ds_name, train_data, fitted_regressor_instance, explainer_class,
     rep_number, verbose=1):
 
@@ -290,8 +350,8 @@ def _fit_explianer(*,
             print_informations(
                 p_id       = os.getpid(),
                 task       = "fit explai", # only 10 characters to describe
-                regressor  = fitted_regressor_instance.__class__.__name__[:10],
-                explainer  = explainer_class.__name__[:16],
+                regressor  = fitted_regressor_instance.__class__.__name__,
+                explainer  = explainer_class.__name__,
                 ds_name    = ds_name,
                 rep_number = str(rep_number),
                 message    = "Fitting the explainer to be used to generate "
@@ -339,7 +399,7 @@ def _explain_global_and_save_data(*,
                 p_id       = os.getpid(),
                 task       = "global exp",
                 regressor  = pred_name[:10],
-                explainer  = fitted_explainer_instance.__class__.__name__[:16],
+                explainer  = fitted_explainer_instance.__class__.__name__,
                 ds_name    = ds_name,
                 rep_number = str(rep_number),
                 message    = "Explaining predictions of the regressor. Old "
@@ -431,8 +491,8 @@ def _explain_local_and_save_data(*,
             print_informations(
                 p_id       = os.getpid(),
                 task       = "local exp",
-                regressor  = fitted_regressor_instance.__class__.__name__[:10],
-                explainer  = fitted_explainer_instance.__class__.__name__[:16],
+                regressor  = fitted_regressor_instance.__class__.__name__,
+                explainer  = fitted_explainer_instance.__class__.__name__,
                 ds_name    = ds_name,
                 rep_number = str(rep_number),
                 message    = "Explaining predictions of the regressor. "
@@ -563,12 +623,13 @@ def _explain_local_and_save_data(*,
                 local_df.to_csv(file, index=False)
  
 
-def regressor_experiment(ds_name, regressor_class, explainer_classes,
+def regressor_experiment(ds_info, regressor_class, explainer_classes,
     rep_number, results_path, datasets_path, n_local_explanations = 30,
     metrics_factor=0.001, verbose=1):
     
     """Complete experiment for a given regressor and data set.
     """
+    ds_name, ds_collection = ds_info
 
     if verbose:
         with FileLock(f'{tempfile.gettempdir()}/print_lock.lock'):
@@ -582,18 +643,18 @@ def regressor_experiment(ds_name, regressor_class, explainer_classes,
     # loading data
     with FileLock(f'{results_path}/_experiments_lock.lock'):
         train_data = pd.read_csv(
-                f'{datasets_path}/train/{ds_name}_UNI.csv', sep=',', 
-                header=0, index_col=False).values
+                glob(f'{datasets_path}/{ds_collection}/train/{ds_name}_*.csv')[0],
+                sep=',', header=0, index_col=False).values
 
         test_data = pd.read_csv(
-                f'{datasets_path}/test/{ds_name}_LHS.csv', sep=',',
-                header=0, index_col=False).values
+                glob(f'{datasets_path}/{ds_collection}/test/{ds_name}_*.csv')[0],
+                sep=',', header=0, index_col=False).values
 
         X_train, y_train = train_data[:, :-1], train_data[:, -1]
         X_test, y_test = test_data[:, :-1], test_data[:, -1]
 
     best_configuration  = run_or_retrieve_gridsearch(
-        ds_name         = ds_name,
+        ds_info         = ds_info,
         regressor_class = regressor_class, 
         results_path    = results_path,
         datasets_path   = datasets_path,
@@ -615,7 +676,7 @@ def regressor_experiment(ds_name, regressor_class, explainer_classes,
         np.min([X_train.shape[0], X_test.shape[0], n_local_explanations])
     
     for explainer_class in explainer_classes:
-        fitted_explainer = _fit_explianer(
+        fitted_explainer = _fit_explainer(
             ds_name                   = ds_name,
             train_data                = (X_train, y_train),
             fitted_regressor_instance = fitted_regressor,
@@ -641,12 +702,13 @@ def regressor_experiment(ds_name, regressor_class, explainer_classes,
             )
 
 
-def groundtruth_experiment(ds_name, feynman_regressor, explainer_classes,
+def groundtruth_experiment(ds_info, groundtruth_regressor, explainer_classes,
     rep_number, results_path, datasets_path, n_local_explanations = 30,
     metrics_factor=0.001, verbose=1):
  
-    """Complete experiment for a the original feynman equation for the data set.
+    """Complete experiment for a dataset with groundtruth for the data set.
     """
+    ds_name, ds_collection = ds_info
 
     if verbose:
         with FileLock(f'{tempfile.gettempdir()}/print_lock.lock'):
@@ -659,26 +721,26 @@ def groundtruth_experiment(ds_name, feynman_regressor, explainer_classes,
 
     with FileLock(f'{results_path}/_experiments_lock.lock'):
         train_data = pd.read_csv(
-                f'{datasets_path}/train/{ds_name}_UNI.csv', sep=',', header=0,
-                index_col=False).values
+            glob(f'{datasets_path}/{ds_collection}/train/{ds_name}_*.csv')[0],
+            sep=',', header=0, index_col=False).values
 
         test_data = pd.read_csv(
-                f'{datasets_path}/test/{ds_name}_LHS.csv', sep=',', header=0,
-                index_col=False).values
+            glob(f'{datasets_path}/{ds_collection}/test/{ds_name}_*.csv')[0],
+            sep=',', header=0, index_col=False).values
 
         X_train, y_train = train_data[:, :-1], train_data[:, -1]
         X_test, y_test   = test_data[:, :-1], test_data[:, -1]
 
     # Not saving regression results. Error should always be zero.
 
-    fitted_regressor = feynman_regressor(
+    fitted_regressor = groundtruth_regressor(
         equation_name=ds_name).fit(X_train, y_train)
 
     n_local_explanations = \
         np.min([X_train.shape[0], X_test.shape[0], n_local_explanations])
         
     for explainer_class in explainer_classes:
-        fitted_explainer = _fit_explianer(
+        fitted_explainer = _fit_explainer(
             ds_name                   = ds_name,
             train_data                = (X_train, y_train),
             fitted_regressor_instance = fitted_regressor,
@@ -702,3 +764,327 @@ def groundtruth_experiment(ds_name, feynman_regressor, explainer_classes,
                 metrics_factor            = metrics_factor, 
                 results_path              = results_path
             )
+
+
+def exectime_experiment(ds_info, regressor_class, explainer_classes,
+    rep_number, results_path, datasets_path, n_local_explanations = 30,
+    metrics_factor=0.001, verbose=1):
+
+    """Execution time experiment. Default values are the same as the
+    benchmark experiment.
+    """
+    ds_name, ds_collection = ds_info
+
+    if verbose:
+        with FileLock(f'{tempfile.gettempdir()}/print_lock.lock'):
+            message = " PROCESS {:5s} STARTED A NEW EXECTIME EXPERIMENT ".\
+                format(str(os.getpid()))
+            
+            print("+" + 78*"=" + "+")
+            print("|{:^78s}|".format(message))
+            print("+" + 78*"=" + "+")
+
+    # loading data
+    with FileLock(f'{results_path}/_experiments_lock.lock'):
+        train_data = pd.read_csv(
+            glob(f'{datasets_path}/{ds_collection}/train/{ds_name}_*.csv')[0],
+            sep=',', header=0, index_col=False).values
+
+        test_data = pd.read_csv(
+            glob(f'{datasets_path}/{ds_collection}/test/{ds_name}_*.csv')[0],
+            sep=',', header=0, index_col=False).values
+
+        X_train, y_train = train_data[:, :-1], train_data[:, -1]
+        X_test, y_test = test_data[:, :-1], test_data[:, -1]
+
+    best_configuration  = run_or_retrieve_gridsearch(
+        ds_info         = ds_info,
+        regressor_class = regressor_class, 
+        results_path    = results_path,
+        datasets_path   = datasets_path,
+        verbose         = 1
+    )
+
+    regressor_instance = regressor_class(
+        **best_configuration, random_state=None)
+
+    if verbose:
+        with FileLock(f'{tempfile.gettempdir()}/print_lock.lock'):
+            print_informations(
+                p_id       = os.getpid(),
+                task       = '    fit   ', 
+                regressor  = regressor_instance.__class__.__name__,
+                explainer  = '--',
+                ds_name    = ds_name,
+                rep_number = str(rep_number),
+                message    = "Fitting and evaluating the regressor. Old "
+                             "results will be deleted",
+                header=True
+            )
+        
+    # Fitting the regressor
+    fitted_regressor = regressor_instance.fit(X_train, y_train)
+
+    # avoid trying to explain more that exists in the train or test data sets
+    n_local_explanations = \
+        np.min([X_train.shape[0], X_test.shape[0], n_local_explanations])
+    
+    columns = ['dataset', 'rep'] + \
+              [f'{e.__name__}_global_time' for e in explainer_classes] + \
+              [f'{e.__name__}_local_time' for e in explainer_classes]
+
+    global_times = [] # We'll fill the times inside a loop and concatenate when
+    local_times  = [] # creating the final data frame.
+
+    # Now we'll explain the fitted regressor, but reporting only the time
+    # each explainer took.
+
+    for explainer_class in explainer_classes:
+        # Global explanation ---------------------------------------------------
+        start_t = time.time()
+        fitted_explainer = _fit_explainer(
+            ds_name                   = ds_name,
+            train_data                = (X_train, y_train),
+            fitted_regressor_instance = fitted_regressor,
+            explainer_class           = explainer_class,
+            rep_number                = rep_number
+        )
+        try:
+            fitted_explainer._check_fit(X_test, y_test)
+        except (NotApplicableException, NotFittedError) as e:
+            # this will indicate that the explainer is not applicable
+            start_t = np.nan
+                            
+        else:
+            try:
+                # Explaining the test data
+                _ = fitted_explainer.explain_local(X_test)
+
+            except (NotApplicableException, NotFittedError) as e:
+                start_t = np.nan
+
+            except Exception as e:
+                raise(e) # If this happens, the user must know
+
+        local_times.append(time.time() - start_t)
+
+        # Local explanation ----------------------------------------------------
+        start_t = time.time()
+        fitted_explainer = _fit_explainer(
+            ds_name                   = ds_name,
+            train_data                = (X_train, y_train),
+            fitted_regressor_instance = fitted_regressor,
+            explainer_class           = explainer_class,
+            rep_number                = rep_number
+        )
+        try:
+            fitted_explainer._check_fit(X_test, y_test)
+        except NotApplicableException as e:
+            # this will indicate that the explainer is not applicable
+            start_t = np.nan
+
+        else:
+            try:
+                _ = fitted_explainer.explain_global(X_train, y_train)[0, :]
+            except NotApplicableException as e:
+                # this will indicate that the explainer is not applicable
+                start_t = np.nan
+
+            except Exception as e:
+                raise(e) # If this happens, the user must know
+        
+        global_times.append(time.time() - start_t)
+
+    # saving the results
+
+    exectime_file = f'{results_path}/4.exectime/' + \
+                    f'{fitted_regressor.__class__.__name__}.csv'
+
+    results_df = None 
+
+    with FileLock(f'{results_path}/_experiments_lock.lock'):
+        if os.path.isfile(exectime_file):
+            results_df = pd.read_csv(exectime_file).copy()
+        else:
+            results_df = pd.DataFrame(columns=columns)
+
+        # removing old results
+        df_slice = results_df[
+            (results_df['dataset']==ds_name) &
+            (results_df['rep']==rep_number)]
+
+        if len(df_slice)>0:
+            results_df = results_df.drop(df_slice.index)
+
+        data = {** {
+            'dataset'   : ds_name,
+            'rep'       : rep_number,
+        }, **{
+            f'{e.__name__}_global_time': global_times[i]
+            for i, e in enumerate(explainer_classes)
+        }, **{
+            f'{e.__name__}_local_time': local_times[i]
+            for i, e in enumerate(explainer_classes)
+        }}
+
+        results_df = results_df.append(pd.Series(data), ignore_index=True)
+        results_df.to_csv(exectime_file, index=False)
+
+
+
+def exectime_experiment_groundtruth(ds_info, groundtruth_regressor, explainer_classes,
+    rep_number, results_path, datasets_path, n_local_explanations = 30,
+    metrics_factor=0.001, verbose=1):
+
+    """Execution time experiment. Default values are the same as the
+    benchmark experiment.
+    """
+
+    ds_name, ds_collection = ds_info
+
+    if verbose:
+        with FileLock(f'{tempfile.gettempdir()}/print_lock.lock'):
+            message = " PROCESS {:5s} STARTED A NEW EXECTIME EXPERIMENT ".\
+                format(str(os.getpid()))
+            
+            print("+" + 78*"=" + "+")
+            print("|{:^78s}|".format(message))
+            print("+" + 78*"=" + "+")
+
+    # loading data
+    with FileLock(f'{results_path}/_experiments_lock.lock'):
+        train_data = pd.read_csv(
+            glob(f'{datasets_path}/{ds_collection}/train/{ds_name}_*.csv')[0],
+            sep=',', header=0, index_col=False).values
+
+        test_data = pd.read_csv(
+            glob(f'{datasets_path}/{ds_collection}/test/{ds_name}_*.csv')[0],
+            sep=',', header=0, index_col=False).values
+
+        X_train, y_train = train_data[:, :-1], train_data[:, -1]
+        X_test, y_test = test_data[:, :-1], test_data[:, -1]
+
+    regressor_instance = groundtruth_regressor(
+        equation_name=ds_name)
+
+    if verbose:
+        with FileLock(f'{tempfile.gettempdir()}/print_lock.lock'):
+            print_informations(
+                p_id       = os.getpid(),
+                task       = '    fit   ', 
+                regressor  = regressor_instance.__class__.__name__,
+                explainer  = '--',
+                ds_name    = ds_name,
+                rep_number = str(rep_number),
+                message    = "Fitting and evaluating the regressor. Old "
+                             "results will be deleted",
+                header=True
+            )
+        
+    # Fitting the regressor
+    fitted_regressor = regressor_instance.fit(X_train, y_train)
+
+    # avoid trying to explain more that exists in the train or test data sets
+    n_local_explanations = \
+        np.min([X_train.shape[0], X_test.shape[0], n_local_explanations])
+    
+    columns = ['dataset', 'rep'] + \
+              [f'{e.__name__}_global_time' for e in explainer_classes] + \
+              [f'{e.__name__}_local_time' for e in explainer_classes]
+
+    global_times = [] # We'll fill the times inside a loop and concatenate when
+    local_times  = [] # creating the final data frame.
+
+    # Now we'll explain the fitted regressor, but reporting only the time
+    # each explainer took.
+
+    for explainer_class in explainer_classes:
+        # Global explanation ---------------------------------------------------
+        start_t = time.time()
+        fitted_explainer = _fit_explainer(
+            ds_name                   = ds_name,
+            train_data                = (X_train, y_train),
+            fitted_regressor_instance = fitted_regressor,
+            explainer_class           = explainer_class,
+            rep_number                = rep_number
+        )
+        try:
+            fitted_explainer._check_fit(X_test, y_test)
+        except (NotApplicableException, NotFittedError) as e:
+            # this will indicate that the explainer is not applicable
+            start_t = np.nan
+                            
+        else:
+            try:
+                # Explaining the test data
+                _ = fitted_explainer.explain_local(X_test)
+
+            except (NotApplicableException, NotFittedError) as e:
+                start_t = np.nan
+
+            except Exception as e:
+                raise(e) # If this happens, the user must know
+
+        local_times.append(time.time() - start_t)
+
+        # Local explanation ----------------------------------------------------
+        start_t = time.time()
+        fitted_explainer = _fit_explainer(
+            ds_name                   = ds_name,
+            train_data                = (X_train, y_train),
+            fitted_regressor_instance = fitted_regressor,
+            explainer_class           = explainer_class,
+            rep_number                = rep_number
+        )
+        try:
+            fitted_explainer._check_fit(X_test, y_test)
+        except NotApplicableException as e:
+            # this will indicate that the explainer is not applicable
+            start_t = np.nan
+
+        else:
+            try:
+                _ = fitted_explainer.explain_global(X_train, y_train)[0, :]
+            except NotApplicableException as e:
+                # this will indicate that the explainer is not applicable
+                start_t = np.nan
+
+            except Exception as e:
+                raise(e) # If this happens, the user must know
+        
+        global_times.append(time.time() - start_t)
+
+    # saving the results
+
+    exectime_file = f'{results_path}/4.exectime/' + \
+                    f'{fitted_regressor.__class__.__name__}.csv'
+
+    results_df = None 
+
+    with FileLock(f'{results_path}/_experiments_lock.lock'):
+        if os.path.isfile(exectime_file):
+            results_df = pd.read_csv(exectime_file).copy()
+        else:
+            results_df = pd.DataFrame(columns=columns)
+
+        # removing old results
+        df_slice = results_df[
+            (results_df['dataset']==ds_name) &
+            (results_df['rep']==rep_number)]
+
+        if len(df_slice)>0:
+            results_df = results_df.drop(df_slice.index)
+
+        data = {** {
+            'dataset'   : ds_name,
+            'rep'       : rep_number,
+        }, **{
+            f'{e.__name__}_global_time': global_times[i]
+            for i, e in enumerate(explainer_classes)
+        }, **{
+            f'{e.__name__}_local_time': local_times[i]
+            for i, e in enumerate(explainer_classes)
+        }}
+
+        results_df = results_df.append(pd.Series(data), ignore_index=True)
+        results_df.to_csv(exectime_file, index=False)

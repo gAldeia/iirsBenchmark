@@ -1,7 +1,7 @@
 # Author:  Guilherme Aldeia
 # Contact: guilherme.aldeia@ufabc.edu.br
-# Version: 1.0.0
-# Last modified: 10-16-2021 by Guilherme Aldeia
+# Version: 1.0.1
+# Last modified: 12-27-2021 by Guilherme Aldeia
 
 
 """
@@ -18,90 +18,39 @@ import pandas as pd
 import iirsBenchmark.explainers as explainers
 import iirsBenchmark.regressors as regressors
 
-from multiprocessing        import Pool, cpu_count
+from multiprocessing        import cpu_count
 from itertools              import product
-from iirsBenchmark.feynman  import Feynman_regressor
+from iirsBenchmark.groundtruth  import Feynman_regressor
+from iirsBenchmark.groundtruth  import GPbenchmark_regressor
 from _files_workers_control import (setup_environment, 
     worker_gridsearch, worker_experiment, worker_groundtruth)
+from _pool_managers         import (run_workers_in_chunks, run_workers_in_pool)
 
 
 # Where to find the feynman data sets and where to save the results
 datasets_path = '../datasets'
+datasets_collections = ['GPbenchmark'] #['Feynman', 'GPbenchmark']
 results_path  = '../results'
-
-
-def run_workers_in_chunks(chunk_size, configurations, worker):
-    """Auxiliary method to take a chunk size, a list of configurations 
-    and a worker that takes the configurations as arguments.
-
-    This method will divide the configurations in chunks in a random order
-    (this makes easier to track the results of the experiments while it is
-    not finishet yet), then will perform the parallel processing in chunks.
-
-    It seems that, for some explainers that takes long time to run, the
-    python/OS/processing module ends up considering that there is an iddle 
-    process in the pool and starts to execute another experiment. This is
-    an alternative if you are experiencing this kind of problems.
-    """
-    
-    # The parallel processing, chunck sizes, and many other factors make
-    # the time measurements really untrustfull to make any conclusion.
-    # To properly evaluate the time consumption of explainers,
-    # it is better to redesign the experiments to avoid this problem
-    # (or run in 1 cpu on a machine without any other processes running).
-
-    configurations = np.array(configurations)
-
-    # shuffle this list to avoid consecutive regressor experiments
-    np.random.shuffle(configurations)
-
-    number_of_chunks = np.ceil(
-        (len(configurations)-chunk_size)/chunk_size ).astype(int)+1
-
-    # Separating in chuncks so multiprocessing doesn't create
-    # more processes than the pool size when there is a lot of blocking
-    # and iddle cores.
-    for i in range(number_of_chunks):
-        beginIndex = i*chunk_size
-        finalIndex = min(beginIndex+chunk_size, len(configurations))
-
-        p_pool = Pool(chunk_size)
-
-        # map is a blocking method
-        p_pool.starmap(worker, configurations[beginIndex:finalIndex])
-        
-        p_pool.close()
-        p_pool.join()
-
-
-def run_workers_in_pool(cpus_to_use, configurations, worker):
-    """Alternative to the previous process if you think the chunks are slower.
-    """
-
-    configurations = np.array(configurations)
-
-    # shuffle this list to avoid consecutive regressor experiments
-    np.random.shuffle(configurations)
-
-    p_pool = Pool(cpus_to_use)
-    p_pool.starmap(worker, configurations)
-    
-    p_pool.close()
-    p_pool.join()
 
 
 if __name__ == '__main__':
 
     # Reading the data sets names
-    ds_names = pd.read_csv(
-        '../datasets/FeynmanEquations.csv')['Filename'].values
+    ds_infos = []
 
-    # Creating the folder structure in the results path
+    for dss in datasets_collections:
+        filenames = pd.read_csv(
+            f'{datasets_path}/{dss}/{dss}Equations.csv')['Filename'].to_list()
+
+        # Appending the dataset names of the collection
+        ds_infos = ds_infos + [(f, dss) for f in filenames]
+
+    # Creating the folder structure in the results path.
     setup_environment(results_path)
 
     # Will use half of the available cpus
     available_cpus = cpu_count()
-    cpus_to_use = np.maximum(available_cpus//2, 1)
+    cpus_to_use = np.maximum(10, 1)
     print(f"Available cpus: {available_cpus}. Using {cpus_to_use}.")
 
     print("Experiments are about to be executed. The informations will be "
@@ -113,29 +62,37 @@ if __name__ == '__main__':
     input()
 
     # Groundtruth --------------------------------------------------------------
-    if True: # set to False to skip, set to True to execute
+    if False: # set to False to skip, set to True to execute
 
         print("Executing the explainers for the groundtruth expression")
 
         # Everything must be a list to work with itertools' product method.
+        for dss in datasets_collections:
+            filenames = pd.read_csv(
+            f'{datasets_path}/{dss}/{dss}Equations.csv')['Filename'].to_list()
 
-        # We use a list of all explainers to use every explainer to 
-        # explain the fitted regressor
-        groundtruth_configurations = list(product(
-            ds_names,                        # List of data set names
-            [Feynman_regressor],             # List with single item: feynman regressor
-            [[getattr(explainers, explainer) # List with single item: list of all explainer classes
-                for explainer in explainers.__all__]],
-            [0],                             # List with single item: index of repetitions
-            [results_path],                  # List with single item: the result path
-            [datasets_path],                 # List with single item: data sets path
-            [30],                            # List with single item: Number of samples to locally explain
-            [0.001],                         # List with single item: Neighborhood lambda parameter
-            repeat=1                         # attribute of product method
-        ))
+            # Appending the dataset names of the collection
+            ds_infos = [(f, dss) for f in filenames]
 
-        run_workers_in_chunks(
-            cpus_to_use, groundtruth_configurations, worker_groundtruth)
+            groundtruth_regressor = Feynman_regressor if dss=="Feynman" else GPbenchmark_regressor
+            
+            # We use a list of all explainers to use every explainer to 
+            # explain the fitted regressor
+            groundtruth_configurations = list(product(
+                ds_infos,                        # List of data set names
+                [groundtruth_regressor],             # List with single item: feynman regressor
+                [[getattr(explainers, explainer) # List with single item: list of all explainer classes
+                    for explainer in explainers.__all__]],
+                [0],                             # List with single item: index of repetitions
+                [results_path],                  # List with single item: the result path
+                [datasets_path],                 # List with single item: data sets path
+                [30],                            # List with single item: Number of samples to locally explain
+                [0.001],                         # List with single item: Neighborhood lambda parameter
+                repeat=1                         # attribute of product method
+            ))
+
+            run_workers_in_chunks(
+                cpus_to_use, groundtruth_configurations, worker_groundtruth)
         
     # gridsearch ---------------------------------------------------------------
     if True: # set to False to skip, set to True to execute
@@ -148,7 +105,7 @@ if __name__ == '__main__':
         print("Executing the gridsearch for all regressors")
 
         gridsearch_configurations = list(product(
-            ds_names,                        # List of data set names
+            ds_infos,                        # List of data set names
             [getattr(regressors, regressor)  # List with all regressors classes
                 for regressor in regressors.__all__],
             [results_path],                  # List with single item: the result path
@@ -168,7 +125,7 @@ if __name__ == '__main__':
         print("Executing the final experiment for all regressors")
 
         experiment_configurations = list(product(
-            ds_names,                        # List of data set names
+            ds_infos,                        # List of data set names
             [getattr(regressors, regressor)  # List with all stochastic regressors classes
                 for regressor in regressors.__all__
                 if getattr(regressors, regressor).stochastic_executions], 
@@ -181,7 +138,7 @@ if __name__ == '__main__':
             [0.001],                         # List with single item: Neighborhood lambda parameter
             repeat=1                         # attribute of product method
         )) + list(product(
-            ds_names,                        # List of data set names
+            ds_infos,                        # List of data set names
             [getattr(regressors, regressor)  # List with all non-stochastic regressors classes
                 for regressor in regressors.__all__
                 if not getattr(regressors, regressor).stochastic_executions], 
@@ -194,7 +151,20 @@ if __name__ == '__main__':
             [0.001],                         # List with single item: Neighborhood lambda parameter 
             repeat=1                         # attribute of product method
         ))
-                
+
+        experiment_configurations = list(product(
+            ds_infos,                        # List of data set names
+            [getattr(regressors, 'ITEA_regressor')], 
+            [[getattr(explainers, explainer) # List with single item: list of all explainer classes
+                for explainer in explainers.__all__]],
+            list(range(30)),                 # List with the index of repetitions
+            [results_path],                  # List with single item: the result path
+            [datasets_path],                 # List with single item: data sets path
+            [30],                            # List with single item: Number of samples to locally explain
+            [0.001],                         # List with single item: Neighborhood lambda parameter
+            repeat=1                         # attribute of product method
+        ))
+
         run_workers_in_chunks(
             cpus_to_use, experiment_configurations, worker_experiment)        
 
