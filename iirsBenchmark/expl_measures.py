@@ -90,8 +90,8 @@ def _norm_p2(vector):
 
     the vector should be an array of shape (n_obs, n_samples).
     
-    vai ser retornada uma matriz (n_obs, 1) com a norma p2
-    calculada para cada observação
+    This method returns an array of shape (n_obs, 1) where each element
+    is the norm calculated for the corresponding observation.
     """
 
     return np.sqrt(np.sum(
