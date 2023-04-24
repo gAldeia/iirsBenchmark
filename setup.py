@@ -5,7 +5,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setuptools.setup(
     name = "iirsBenchmark",
-    version = "1.1.0",
+    version = "1.1.2",
     author = "Guilherme Aldeia",
     packages = setuptools.find_packages(
         include = ['./iirsBenchmark'],

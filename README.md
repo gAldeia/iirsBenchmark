@@ -122,6 +122,8 @@ The naming convention is the same as the regressors, but ``<name of the explaine
 To explain a fitted regressor (not only the ones provided in this benchmark, but any regressor that implements a predict method), you need to instanciate the explainer, fit it to the same training data used to train the regressor, and then use the methods ``explain_local`` and ``explain_global`` to obtain feature importance explanations. If the model is not agnostic, fit will raise an exception; and if it does not support local/global explanations, it will also raise an exception when the explain functions are called.
 
 ```python
+from iirsBenchmark.explainers import SHAP_explainer, PermutationImportance_explainer
+
 # you must pass the regressor as a named argument for every explainer constructor
 shap = SHAP_explainer(predictor=itea).fit(X, y)
 
@@ -133,7 +135,11 @@ local_exp   = shap.explain_local(X[3].reshape(1, -1))
 
 # Global explanation take more than one sample (ideally the whole train/test data)
 # and returns a single global feature importance for each variable.
-global_exp = shap.explain_global(X)
+pe = PermutationImportance_explainer(predictor=itea).fit(X, y)
+
+global_exp = pe.explain_global(X, y)
+
+print(global_exp)
 ```
 
 
@@ -187,9 +193,9 @@ neighbors = expl_measures.neighborhood(
 )
 
 expl_measures.stability(
-    shap.explain_local, # the explainer we want to evaluate
-    obs_to_explain,     # the observation to explain
-    neighbors           # sampled neighbors to evaluate the metric
+    shap,           # the explainer we want to evaluate
+    obs_to_explain, # the observation to explain
+    neighbors       # sampled neighbors to evaluate the metric
 )
 ```
 
