@@ -4,12 +4,12 @@ import pandas as pd
 
 import iirsBenchmark.explainers as explainers
 
-from iirsBenchmark.feynman    import Feynman_regressor
+from iirsBenchmark.groundtruth    import Feynman_regressor
 from iirsBenchmark.exceptions import NotApplicableException
 
 
 ds_names = pd.read_csv(
-    './datasets/FeynmanEquations.csv')['Filename'].values
+    './datasets/Feynman/FeynmanEquations.csv')['Filename'].values
 
 
 @pytest.mark.parametrize("explainer", explainers.__all__)
@@ -42,7 +42,7 @@ def test_fit_and_explain_local(explainer, ds_name):
     # testing with random datasets. The dataset correctness should be
     # verified in test_feynman.
     data = pd.read_csv(
-        f'./datasets/test/{ds_name}_LHS.csv', sep=',', 
+        f'./datasets/Feynman/test/{ds_name}_LHS.csv', sep=',', 
         header=0, index_col=False).values
 
     X, y = data[:, :-1], data[:, -1]
@@ -78,7 +78,7 @@ def test_fit_and_explain_global(explainer, ds_name):
     # testing with random datasets. The dataset correctness should be
     # verified in test_feynman.
     data = pd.read_csv(
-        f'./datasets/test/{ds_name}_LHS.csv', sep=',', 
+        f'./datasets/Feynman/test/{ds_name}_LHS.csv', sep=',', 
         header=0, index_col=False).values
 
     X, y = data[:, :-1], data[:, -1]

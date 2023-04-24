@@ -5,21 +5,21 @@ import pytest
 from scipy.optimize     import check_grad
 from sklearn.exceptions import NotFittedError
 
-from iirsBenchmark.feynman                   import Feynman_regressor
-from iirsBenchmark.feynman._FeynmanEquations import feynmanPyData
+from iirsBenchmark.groundtruth                   import Feynman_regressor
+from iirsBenchmark.groundtruth._FeynmanEquations import feynmanPyData
 
 
 # It is important that this test module have a comprehensive validation of
 # the synthetic data.
 
 ds_names = pd.read_csv(
-    './datasets/FeynmanEquations.csv')['Filename'].values
+    './datasets/Feynman/FeynmanEquations.csv')['Filename'].values
 
 
 @pytest.mark.parametrize("ds_name", ds_names)
 def test_feynman_functions_evals_correctly_on_train(ds_name):
     train_data = pd.read_csv(
-            f'./datasets/train/{ds_name}_UNI.csv', sep=',', 
+            f'./datasets/Feynman/train/{ds_name}_UNI.csv', sep=',', 
             header=0, index_col=False).values
 
     X_train, y_train = train_data[:, :-1], train_data[:, -1]
@@ -46,7 +46,7 @@ def test_feynman_functions_evals_correctly_on_train(ds_name):
 def test_feynman_functions_evals_correctly_on_test(ds_name):
    
     test_data = pd.read_csv(
-            f'./datasets/test/{ds_name}_LHS.csv', sep=',',
+            f'./datasets/Feynman/test/{ds_name}_LHS.csv', sep=',',
             header=0, index_col=False).values
 
     X_test, y_test = test_data[:, :-1], test_data[:, -1]
@@ -70,7 +70,7 @@ def test_feynman_functions_evals_correctly_on_test(ds_name):
 def test_feynman_autodiff_gradients_on_test(ds_name):
     
     test_data = pd.read_csv(
-            f'./datasets/test/{ds_name}_LHS.csv', sep=',', 
+            f'./datasets/Feynman/test/{ds_name}_LHS.csv', sep=',', 
             header=0, index_col=False).values
 
     X_test, y_test = test_data[:, :-1], test_data[:, -1]

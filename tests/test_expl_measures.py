@@ -7,16 +7,16 @@ import iirsBenchmark.explainers as explainers
 from iirsBenchmark.expl_measures import (
     stability, jaccard_stability, infidelity, neighborhood)
 
-from iirsBenchmark.feynman    import Feynman_regressor
+from iirsBenchmark.groundtruth    import Feynman_regressor
 
 
 ds_names = pd.read_csv(
-    './datasets/FeynmanEquations.csv')['Filename'].values
+    './datasets/Feynman/FeynmanEquations.csv')['Filename'].values
 
 
 def load_samples_by_ds_name(ds_name):
     data = pd.read_csv(
-        f'./datasets/test/{ds_name}_LHS.csv', sep=',', 
+        f'./datasets/Feynman/test/{ds_name}_LHS.csv', sep=',', 
         header=0, index_col=False).values
 
     # Using only the first 100 observations of the data

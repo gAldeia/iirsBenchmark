@@ -13,7 +13,7 @@ from sklearn.exceptions     import ConvergenceWarning
 
 
 ds_names = pd.read_csv(
-    './datasets/FeynmanEquations.csv')['Filename'].values
+    './datasets/Feynman/FeynmanEquations.csv')['Filename'].values
 
 
 @pytest.mark.parametrize("regressor", regressors.__all__)
@@ -47,7 +47,7 @@ def test_fit_and_predict(regressor, ds_name):
     # verified in test_feynman.
     
     data = pd.read_csv(
-            f'./datasets/train/{ds_name}_UNI.csv', sep=',', 
+            f'./datasets/Feynman/train/{ds_name}_UNI.csv', sep=',', 
             header=0, index_col=False).values
 
     X, y = data[:, :-1], data[:, -1]
@@ -88,7 +88,7 @@ def test_fit_and_predict(regressor, ds_name):
 def test_gradients(regressor, ds_name):
 
     data = pd.read_csv(
-        f'./datasets/train/{ds_name}_UNI.csv', sep=',', 
+        f'./datasets/Feynman/train/{ds_name}_UNI.csv', sep=',', 
         header=0, index_col=False).values
 
     X, y = data[:, :-1], data[:, -1]
