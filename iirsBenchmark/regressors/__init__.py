@@ -39,6 +39,7 @@ from iirsBenchmark.regressors.KNN_regressor          import KNN_regressor
 from iirsBenchmark.regressors.SVM_regressor          import SVM_regressor
 from iirsBenchmark.regressors.RF_regressor           import RF_regressor
 from iirsBenchmark.regressors.XGB_regressor          import XGB_regressor
+from iirsBenchmark.regressors.Operon_regressor       import Operon_regressor
 
 import warnings
 
@@ -57,4 +58,5 @@ __all__ = [
     'XGB_regressor',
     'Lasso_regressor',
     'DecisionTree_regressor',
+    'Operon_regressor'
 ]
