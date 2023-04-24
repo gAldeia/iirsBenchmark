@@ -20,7 +20,7 @@ class ELA_explainer(Base_explainer):
         
         super(ELA_explainer, self).__init__(
             predictor    = predictor,
-            agnostic     = ['ITEA_regressor', #'Operon_regressor',
+            agnostic     = ['ITEA_regressor', 'Operon_regressor', 'GPbenchmark_regressor',
                 'Linear_regressor', 'Lasso_regressor', 'Feynman_regressor'],
             local_scope  = True,
             global_scope = False
