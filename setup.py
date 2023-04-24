@@ -19,7 +19,7 @@ setuptools.setup(
     license = "BSD-3-Clause",
     install_requires = [
         # utility modules
-        "numpy==1.20.3",
+        "numpy==1.22.0",
         "filelock==3.0.12",
         "scipy==1.6.3",
         "jax==0.2.13",
