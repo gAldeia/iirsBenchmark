@@ -21,7 +21,7 @@ setuptools.setup(
         # utility modules
         "numpy==1.22.0",
         "filelock==3.0.12",
-        "scipy==1.6.3",
+        "scipy==1.10.0",
         "jax==0.2.13",
         "jaxlib==0.1.67",
 
