@@ -26,7 +26,7 @@ setuptools.setup(
         "jaxlib==0.1.67",
 
         # regressor modules
-        "scikit-learn==0.24.2",
+        "scikit-learn==1.0.1",
         "itea==1.1.0",
 
         # explainer modules (fixed versions due deprecation warnings of its dependences)
